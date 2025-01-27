@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aadhaar Fraud Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(45deg, #007BFF, #5DADE2, #85C1E9, #D6EAF8);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            color: #333;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .navbar {
+            background-color: #004085;
+            color: white;
+        }
+
+        .navbar-brand {
+            color: white;
+        }
+
+        .sidebar {
+            background-color: #001f3f;
+            color: white;
+            height: 100vh;
+            padding: 1rem;
+        }
+
+        .sidebar a {
+            color: #5DADE2;
+            text-decoration: none;
+            display: block;
+            padding: 0.5rem 0;
+            font-weight: bold;
+        }
+
+        .sidebar a:hover {
+            background-color: #5DADE2;
+            border-radius: 4px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .btn-primary:hover {
+            background-color: #007BFF;
+            transition: all 0.3s ease;
+        }
+
+        .chart-container {
+            max-width: 300px;
+            margin: auto;
+        }
+
+        .header {
+            background-color: #003366;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 1rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            transition: transform 0.3s ease;
+        }
+
+        table:hover {
+            transform: scale(1.02);
+        }
+
+        #results {
+            transition: opacity 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 sidebar">
+                <h4 class="text-center">Dashboard</h4>
+                <div class="mt-4">
+                    <p>Total Images Uploaded: <span id="total-images" class="fw-bold">0</span></p>
+                    <p>Total Aadhaar: <span id="total-aadhaar" class="fw-bold">0</span></p>
+                    <p>Total Non-Aadhaar: <span id="total-non-aadhaar" class="fw-bold">0</span></p>
+                </div>
+            </nav>
+            <main class="col-md-10">
+                <div class="header">
+                    <h1>Aadhaar Fraud Management System</h1>
+                </div>
+
+                <div class="container">
+                    <form id="upload-form" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="zipfile" class="form-label">Upload ZIP File</label>
+                            <input type="file" class="form-control" name="zipfile" id="zipfile" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="excelfile" class="form-label">Upload Excel File</label>
+                            <input type="file" class="form-control" name="excelfile" id="excelfile" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Upload</button>
+                    </form>
+
+                    <div class="chart-container mt-5">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+
+                    <div id="results" class="mt-4"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const pieChartCtx = document.getElementById('pieChart').getContext('2d');
+        const pieChart = new Chart(pieChartCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Aadhaar', 'Non-Aadhaar'],
+                datasets: [{
+                    label: 'Document Distribution',
+                    data: [0, 0], // Initial values, updated dynamically
+                    backgroundColor: ['#0056b3', '#5DADE2'],
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            },
+        });
+
+        $(document).ready(function() {
+            $('#upload-form').on('submit', function(e) {
+                e.preventDefault();
+
+                var formData = new FormData(this);
+                $.ajax({
+                    url: '/upload',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.results) {
+                            const aadhaarCount = response.results.filter(item => item['Document Type'] === 'Aadhaar').length;
+                            const nonAadhaarCount = response.results.filter(item => item['Document Type'] === 'Non-Aadhaar').length;
+
+                            $('#total-images').text(response.results.length);
+                            $('#total-aadhaar').text(aadhaarCount);
+                            $('#total-non-aadhaar').text(nonAadhaarCount);
+
+                            pieChart.data.datasets[0].data = [aadhaarCount, nonAadhaarCount];
+                            pieChart.update();
+
+                            var headers = Object.keys(response.results[0]);
+
+                            var resultHtml = '<h3 class="text-primary">Processed Results</h3><table class="table table-bordered table-striped"><thead><tr>';
+                            headers.forEach(header => {
+                                resultHtml += `<th>${header}</th>`;
+                            });
+                            resultHtml += '</tr></thead><tbody>';
+
+                            response.results.forEach(row => {
+                                resultHtml += '<tr>';
+                                headers.forEach(header => {
+                                    resultHtml += `<td>${row[header]}</td>`;
+                                });
+                                resultHtml += '</tr>';
+                            });
+                            resultHtml += '</tbody></table>';
+
+                            $('#results').css('opacity', 0).html(resultHtml).animate({ opacity: 1 }, 500);
+                        } else {
+                            $('#results').html('<p class="text-danger">No results found.</p>');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.log(xhr.responseText);
+                        alert('Error: ' + error);
+                    },
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+

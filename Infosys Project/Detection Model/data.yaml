@@ -1,0 +1,9 @@
+path: 'detect/data.yaml'
+train: 'C:\Users\user\Desktop\Infosys Project\Detection Model\New folder\dataset\dataset\dataset\images\train'
+val: 'C:\Users\user\Desktop\Infosys Project\Detection Model\New folder\dataset\dataset\dataset\images\val'
+
+
+names:
+  0: name
+  1: uid
+  2: address
